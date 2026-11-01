@@ -34,7 +34,7 @@ class CandidateCvController extends Controller
         $profile = CandidateProfile::firstOrCreate(['user_id' => $request->user()->id]);
         $file = $request->file('cv');
 
-        $latestVersion = (int) (CandidateCv::where('candidate_id', $profile->id)->max('version') ?? 0);
+        $latestVersion = (int) (CandidateCv::withTrashed()->where('candidate_id', $profile->id)->max('version') ?? 0);
         $nextVersion = $latestVersion + 1;
 
         $storedPath = $file->store("cvs/{$profile->id}", 'local');
