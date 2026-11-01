@@ -21,7 +21,7 @@ class CandidateProfileController extends Controller
         );
 
         return (new CandidateProfileResource(
-            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCvs'])
+            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCourses', 'candidateCvs'])
         ))->response()->setStatusCode(200);
     }
 
@@ -37,7 +37,7 @@ class CandidateProfileController extends Controller
         $profile->update($request->validated());
 
         return (new CandidateProfileResource(
-            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCvs'])
+            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCourses', 'candidateCvs'])
         ))->response()->setStatusCode(200);
     }
 

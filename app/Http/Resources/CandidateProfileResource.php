@@ -32,6 +32,7 @@ class CandidateProfileResource extends JsonResource
             ])),
             'experiences'       => CandidateExperienceResource::collection($this->whenLoaded('candidateExperiences')),
             'educations'        => CandidateEducationResource::collection($this->whenLoaded('candidateEducations')),
+            'courses'           => CandidateCoursesResource::collection($this->whenLoaded('candidateCourses')),
             'cvs'               => CandidateCvResource::collection($this->whenLoaded('candidateCvs')),
         ];
     }

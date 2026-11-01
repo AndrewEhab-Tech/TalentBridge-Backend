@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\Application\CandidateApplicationController;
 use App\Http\Controllers\Api\Application\CompanyApplicationController;
 use App\Http\Controllers\Api\Auth\UserAuthController;
 use App\Http\Controllers\Api\Candidate\CandidateCvController;
+use App\Http\Controllers\Api\Candidate\CandidateCoursesController;
+use App\Http\Controllers\Api\Candidate\CandidateSkillsController;
 use App\Http\Controllers\Api\Candidate\CandidateEducationController;
 use App\Http\Controllers\Api\Candidate\CandidateExperienceController;
 use App\Http\Controllers\Api\Candidate\CandidateProfileController;
@@ -185,9 +187,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/notifications/read-all', [CandidateProfileController::class, 'markAllNotificationsAsRead'])->name('notifications.read-all');
         Route::patch('/notifications/{id}/read', [CandidateProfileController::class, 'markNotificationAsRead'])->name('notifications.read');
 
-        // Skills Management
-        Route::get('/skills', [CandidateSkillController::class, 'index'])->name('skills.index');
-        Route::post('/skills', [CandidateSkillController::class, 'sync'])->name('skills.sync');
+        // Skills Management (Fouad CandidateSkills CRUD + sync)
+        Route::get('/skills', [CandidateSkillsController::class, 'index'])->name('skills.index');
+        Route::post('/skills', [CandidateSkillsController::class, 'store'])->name('skills.store');
+        Route::get('/skills/{id}', [CandidateSkillsController::class, 'show'])->name('skills.show');
+        Route::put('/skills/{id}', [CandidateSkillsController::class, 'update'])->name('skills.update');
+        Route::delete('/skills/{id}', [CandidateSkillsController::class, 'destroy'])->name('skills.destroy');
+        Route::post('/skills/sync', [CandidateSkillController::class, 'sync'])->name('skills.sync');
+
+        // Courses Management (Fouad CandidateCourses CRUD)
+        Route::get('/courses', [CandidateCoursesController::class, 'index'])->name('courses.index');
+        Route::post('/courses', [CandidateCoursesController::class, 'store'])->name('courses.store');
+        Route::get('/courses/{id}', [CandidateCoursesController::class, 'show'])->name('courses.show');
+        Route::put('/courses/{id}', [CandidateCoursesController::class, 'update'])->name('courses.update');
+        Route::delete('/courses/{id}', [CandidateCoursesController::class, 'destroy'])->name('courses.destroy');
 
         // CV Management
         Route::get('/cvs', [CandidateCvController::class, 'index'])->name('cvs.index');
