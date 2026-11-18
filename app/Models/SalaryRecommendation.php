@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SalaryRecommendation extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -23,5 +25,17 @@ class SalaryRecommendation extends Model
     public function salaryRecord(): BelongsTo
     {
         return $this->belongsTo(SalaryRecord::class, 'salary_record_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'currency' => ['currency_id', Currency::class, 'EGP'],
+        ];
+    }
+
+    public function currency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'currency_id');
     }
 }

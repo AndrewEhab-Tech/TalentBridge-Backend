@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InterviewerAvailability extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use HasFactory, SoftDeletes, Auditable;
 
     /**
@@ -28,6 +30,7 @@ class InterviewerAvailability extends Model
         'start_at',
         'end_at',
         'availability_status',
+        'status_id',
         'UID',
         'LUID',
     ];
@@ -64,5 +67,17 @@ class InterviewerAvailability extends Model
     public function interviewBookings(): HasMany
     {
         return $this->bookings();
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'availability_status' => ['status_id', Status::class, 'open', 'availability'],
+        ];
+    }
+
+    public function availabilityStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
     }
 }

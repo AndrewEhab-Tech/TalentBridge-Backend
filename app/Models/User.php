@@ -16,6 +16,8 @@ use Illuminate\Support\Collection;
 
 class User extends Authenticatable
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes, Auditable;
 
 
@@ -23,7 +25,7 @@ class User extends Authenticatable
     protected $guarded = [];
 
     protected $attributes = [
-        'account_status_id' => AccountStatus::ACTIVE,
+        'status_id' => Status::ACCOUNT_ACTIVE,
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -35,27 +37,38 @@ class User extends Authenticatable
 
         public function accountStatus(): BelongsTo
     {
-        return $this->belongsTo(AccountStatus::class, 'account_status_id');
+        return $this->belongsTo(Status::class, 'status_id');
     }
 
     public function isActive(): bool
     {
-        return $this->account_status_id === AccountStatus::ACTIVE;
+        return $this->status_id === Status::ACCOUNT_ACTIVE;
     }
 
     public function isDeactivated(): bool
     {
-        return $this->account_status_id === AccountStatus::DEACTIVATED;
+        return $this->status_id === Status::ACCOUNT_DEACTIVATED;
     }
 
     public function isBlocked(): bool
     {
-        return $this->account_status_id === AccountStatus::BLOCKED;
+        return $this->status_id === Status::ACCOUNT_BLOCKED;
     }
 
     public function isDeleted(): bool
     {
-        return $this->account_status_id === AccountStatus::DELETED;
+        return $this->status_id === Status::ACCOUNT_DELETED;
+    }
+
+    /** Keep the legacy API/account payload key while the database stores status_id. */
+    public function getAccountStatusIdAttribute(): ?int
+    {
+        return isset($this->attributes['account_status_id']) ? (int) $this->attributes['account_status_id'] : (isset($this->attributes['status_id']) ? (int) $this->attributes['status_id'] : null);
+    }
+
+    public function setAccountStatusIdAttribute(int|string|null $value): void
+    {
+        $this->attributes['status_id'] = $value === null ? null : (int) $value;
     }
 
 public function country(): BelongsTo
@@ -68,14 +81,28 @@ public function country(): BelongsTo
         return $this->hasOne(CandidateProfile::class, 'user_id');
     }
 
+    public function emailVerificationCodes(): HasMany
+    {
+        return $this->hasMany(EmailVerificationCode::class);
+    }
+
     public function companyEmployee(): HasOne
     {
         return $this->hasOne(CompanyEmployee::class, 'user_id');
     }
 
-    public function ownedCompanies(): HasMany
+    public function ownedCompany(): HasOne
     {
-        return $this->hasMany(Company::class, 'owner_user_id');
+        return $this->hasOne(Company::class, 'owner_user_id');
+    }
+
+    /**
+     * Backward-compatible relation name for older callers.
+     * The database now enforces one company account per owner.
+     */
+    public function ownedCompanies(): HasOne
+    {
+        return $this->ownedCompany();
     }
 
     public function roles(): BelongsToMany
@@ -120,13 +147,13 @@ public function country(): BelongsTo
             return $companyId ? (int) $companyId : null;
         }
 
-        $owned = $this->ownedCompanies()->first();
+        $owned = $this->ownedCompany()->first();
         if ($owned) {
             return $owned->id;
         }
 
         $employee = $this->companyEmployee;
-        if ($employee && in_array($employee->status, ['approved', 'pending'])) {
+        if ($employee && in_array($employee->approval_status, ['accepted', 'under_review'])) {
             return $employee->company_id;
         }
 
@@ -180,7 +207,7 @@ public function country(): BelongsTo
         }
 
         // Company owner has all company-scoped permissions for their company
-        if ($this->ownedCompanies()->where('id', $companyId)->exists()) {
+        if ($this->ownedCompany()->where('id', $companyId)->exists()) {
             return true;
         }
 
@@ -207,5 +234,23 @@ public function country(): BelongsTo
     public function isAdmin(): bool
     {
         return $this->account_type === 'admin';
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'account_type' => ['account_type_id', AccountType::class, 'candidate'],
+            'locale' => ['language_id', Language::class, 'ar'],
+        ];
+    }
+
+    public function accountType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(AccountType::class, 'account_type_id');
+    }
+
+    public function language(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Language::class, 'language_id');
     }
 }

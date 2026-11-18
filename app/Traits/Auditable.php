@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 trait Auditable
 {
-    /**
-     * Boot the Auditable trait.
-     */
+    
     public static function bootAuditable(): void
     {
         static::creating(function ($model) {
@@ -31,17 +29,13 @@ trait Auditable
         });
     }
 
-    /**
-     * Get the user who created the record.
-     */
+   
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'UID');
     }
 
-    /**
-     * Get the user who last updated the record.
-     */
+    
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'LUID');

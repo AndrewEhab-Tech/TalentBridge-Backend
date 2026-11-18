@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ApplicationStatusHistory extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -27,5 +29,23 @@ class ApplicationStatusHistory extends Model
     public function changer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'from_status' => ['from_status_id', Status::class, null, 'application'],
+            'to_status' => ['to_status_id', Status::class, null, 'application'],
+        ];
+    }
+
+    public function fromApplicationStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'from_status_id');
+    }
+
+    public function toApplicationStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'to_status_id');
     }
 }

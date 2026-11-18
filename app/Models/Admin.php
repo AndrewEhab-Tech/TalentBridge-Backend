@@ -25,7 +25,7 @@ class Admin extends Authenticatable
 
     public function accountStatus(): BelongsTo
     {
-        return $this->belongsTo(AccountStatus::class, 'account_status_id');
+        return $this->belongsTo(Status::class, 'status_id');
     }
 
     public function roles(): BelongsToMany
@@ -68,13 +68,23 @@ class Admin extends Authenticatable
     {
         return $this->roles()
             ->where('admin_roles.name', 'super_admin')
-            ->where('admin_roles.scope', 'platform')
             ->exists();
     }
 
     public function isActive(): bool
     {
-        return $this->account_status_id === AccountStatus::ACTIVE;
+        return $this->status_id === Status::ACCOUNT_ACTIVE;
+    }
+
+    /** Preserve the legacy account status key for existing API consumers. */
+    public function getAccountStatusIdAttribute(): ?int
+    {
+        return isset($this->attributes['account_status_id']) ? (int) $this->attributes['account_status_id'] : (isset($this->attributes['status_id']) ? (int) $this->attributes['status_id'] : null);
+    }
+
+    public function setAccountStatusIdAttribute(int|string|null $value): void
+    {
+        $this->attributes['status_id'] = $value === null ? null : (int) $value;
     }
 
     public function resolveCompanyId(?int $explicitCompanyId = null): ?int

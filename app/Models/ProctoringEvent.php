@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProctoringEvent extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -28,5 +30,17 @@ class ProctoringEvent extends Model
     public function proctoringReviews(): HasMany
     {
         return $this->hasMany(ProctoringReview::class, 'event_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'event_type' => ['proctoring_event_type_id', ProctoringEventType::class, null],
+        ];
+    }
+
+    public function proctoringEventType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ProctoringEventType::class, 'proctoring_event_type_id');
     }
 }

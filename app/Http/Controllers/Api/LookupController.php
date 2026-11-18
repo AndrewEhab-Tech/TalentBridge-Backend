@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\SocialMediaPlatformResource;
 use App\Models\Country;
 use App\Models\JobCategory;
 use App\Models\Skill;
+use App\Models\SocialMediaPlatform;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -59,5 +61,17 @@ class LookupController extends Controller
             'data' => $countries,
         ], 200);
     }
-}
 
+    /**
+     * GET /api/social-media-platforms
+     * List all active social media platforms for dropdowns.
+     */
+    public function socialPlatforms(Request $request): JsonResponse
+    {
+        $platforms = SocialMediaPlatform::active()->orderBy('id')->get();
+
+        return response()->json([
+            'data' => SocialMediaPlatformResource::collection($platforms),
+        ], 200);
+    }
+}

@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CandidateExperience extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -24,5 +26,17 @@ class CandidateExperience extends Model
     public function candidate(): BelongsTo
     {
         return $this->belongsTo(CandidateProfile::class, 'candidate_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'job_title' => ['job_title_id', JobTitle::class, null],
+        ];
+    }
+
+    public function jobTitle(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(JobTitle::class, 'job_title_id');
     }
 }

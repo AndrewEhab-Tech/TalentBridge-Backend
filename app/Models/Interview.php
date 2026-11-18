@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Traits\HasRecordVisibility;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Interview extends Model
 {
-    use HasFactory, SoftDeletes, Auditable;
+    use \App\Models\Concerns\HasLookupAttributes;
+
+    use HasFactory, SoftDeletes, Auditable, HasRecordVisibility;
 
     /**
      * The table associated with the model (Recruitment Platform ERD Page 4).
@@ -28,9 +31,11 @@ class Interview extends Model
      */
     protected $fillable = [
         'application_id',
-        'round_no',
+        'job_interview_round_id',
         'interview_type',
+        'interview_type_id',
         'status',
+        'status_id',
         'meeting_link',
         'location',
         'instructions',
@@ -47,7 +52,6 @@ class Interview extends Model
     protected function casts(): array
     {
         return [
-            'round_no' => 'integer',
         ];
     }
 
@@ -111,7 +115,7 @@ class Interview extends Model
      */
     public function scopeForInterviewer(Builder $query, int|string $interviewerId): Builder
     {
-        return $query->whereHas('bookings', function (Builder $q) use ($interviewerId) {
+        return $query->whereHas('bookings.availability', function (Builder $q) use ($interviewerId) {
             $q->where('interviewer_id', $interviewerId);
         });
     }
@@ -121,10 +125,10 @@ class Interview extends Model
      */
     public function scopeUpcoming(Builder $query): Builder
     {
-        return $query->where('status', '!=', 'cancelled')
+        return $query->whereNotIn('interviews.status_id', Status::idsFor(['cancelled'], 'interview'))
             ->whereHas('bookings', function (Builder $q) {
-                $q->where('start_at', '>=', Carbon::now())
-                  ->where('booking_status', '!=', 'cancelled');
+                $q->whereNotIn('interview_bookings.status_id', Status::idsFor(['cancelled'], 'booking'))
+                  ->whereHas('availability', fn (Builder $a) => $a->where('start_at', '>=', Carbon::now()));
             });
     }
 
@@ -133,7 +137,7 @@ class Interview extends Model
      */
     public function scopePast(Builder $query): Builder
     {
-        return $query->whereHas('bookings', function (Builder $q) {
+        return $query->whereHas('bookings.availability', function (Builder $q) {
             $q->where('start_at', '<', Carbon::now());
         });
     }
@@ -147,7 +151,7 @@ class Interview extends Model
             return $query;
         }
 
-        return $query->where('status', $status);
+        return $query->whereLookup('status', $status);
     }
 
     /**
@@ -172,5 +176,57 @@ class Interview extends Model
     public function canBeEvaluated(): bool
     {
         return strtolower((string) $this->status) !== 'cancelled';
+    }
+
+
+    /**
+     * interviews.round_no no longer exists: the round lives on job_interview_rounds and the
+     * interview points at it through job_interview_round_id. Keep `$interview->round_no` working.
+     */
+    public function getRoundNoAttribute(): ?int
+    {
+        $round = $this->relationLoaded('jobInterviewRound') ? $this->getRelation('jobInterviewRound') : $this->jobInterviewRound;
+
+        return $round?->round_no;
+    }
+
+    /** ORDER BY the round number of the linked job_interview_rounds row. */
+    public function scopeOrderByRound(Builder $query, string $direction = 'asc'): Builder
+    {
+        return $query->orderBy(
+            JobInterviewRound::query()
+                ->select('job_interview_rounds.round_no')
+                ->whereColumn('job_interview_rounds.id', 'interviews.job_interview_round_id'),
+            $direction === 'desc' ? 'desc' : 'asc'
+        );
+    }
+
+    /** WHERE the linked job_interview_rounds row has this round number. */
+    public function scopeWhereRoundNo(Builder $query, int $roundNo): Builder
+    {
+        return $query->whereHas('jobInterviewRound', fn (Builder $round) => $round->where('round_no', $roundNo));
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'interview_type' => ['interview_type_id', InterviewType::class, 'onsite'],
+            'status' => ['status_id', Status::class, 'pending', 'interview'],
+        ];
+    }
+
+    public function interviewType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(InterviewType::class, 'interview_type_id');
+    }
+
+    public function interviewStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
+    }
+
+    public function jobInterviewRound(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(JobInterviewRound::class, 'job_interview_round_id');
     }
 }

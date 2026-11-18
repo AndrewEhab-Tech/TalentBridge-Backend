@@ -68,6 +68,10 @@ class AppServiceProvider extends ServiceProvider
             abort(503, 'The API documentation export is invalid. Run: php artisan scramble:export');
         }
 
+        $spec['servers'] = [
+            ['url' => url('api')],
+        ];
+
         return $spec;
     }
 

@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Skill extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use HasFactory, SoftDeletes, Auditable;
 
 
@@ -29,5 +31,17 @@ class Skill extends Model
     public function jobs(): BelongsToMany
     {
         return $this->belongsToMany(Job::class, 'job_skills', 'skill_id', 'job_id')->withPivot('is_required');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'type' => ['skill_type_id', SkillType::class, 'soft'],
+        ];
+    }
+
+    public function skillType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(SkillType::class, 'skill_type_id');
     }
 }

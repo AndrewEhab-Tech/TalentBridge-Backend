@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CalendarIntegration extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -18,5 +20,23 @@ class CalendarIntegration extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'provider' => ['calendar_provider_id', CalendarProvider::class, 'google'],
+            'sync_status' => ['status_id', Status::class, null, 'sync'],
+        ];
+    }
+
+    public function calendarProvider(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CalendarProvider::class, 'calendar_provider_id');
+    }
+
+    public function syncStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
     }
 }

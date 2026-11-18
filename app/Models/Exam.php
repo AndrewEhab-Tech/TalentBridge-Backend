@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Traits\HasRecordVisibility;
+use App\Traits\HasPublishStatus;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Exam extends Model
 {
-    use SoftDeletes, Auditable;
+    use \App\Models\Concerns\HasLookupAttributes;
+
+    use SoftDeletes, Auditable, HasRecordVisibility;
 
 
     protected $table = 'exams';
@@ -39,5 +43,17 @@ class Exam extends Model
     public function examAttempts(): HasMany
     {
         return $this->hasMany(ExamAttempt::class, 'exam_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'status' => ['status_id', Status::class, 'draft', 'exam'],
+        ];
+    }
+
+    public function examStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
     }
 }

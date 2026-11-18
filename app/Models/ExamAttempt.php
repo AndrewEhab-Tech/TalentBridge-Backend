@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ExamAttempt extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -45,5 +47,17 @@ class ExamAttempt extends Model
     public function proctoringEvents(): HasMany
     {
         return $this->hasMany(ProctoringEvent::class, 'attempt_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'status' => ['status_id', Status::class, 'in_progress', 'attempt'],
+        ];
+    }
+
+    public function attemptStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
     }
 }

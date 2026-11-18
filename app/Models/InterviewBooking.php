@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InterviewBooking extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use HasFactory, SoftDeletes, Auditable;
 
     /**
@@ -24,11 +26,10 @@ class InterviewBooking extends Model
      */
     protected $fillable = [
         'interview_id',
-        'interviewer_id',
         'availability_id',
-        'start_at',
-        'end_at',
+        'active_availability_id',
         'booking_status',
+        'status_id',
         'cancelled_by',
         'cancelled_at',
         'UID',
@@ -43,8 +44,6 @@ class InterviewBooking extends Model
     protected function casts(): array
     {
         return [
-            'start_at' => 'datetime',
-            'end_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
     }
@@ -60,9 +59,9 @@ class InterviewBooking extends Model
     /**
      * Assigned interviewer user.
      */
-    public function interviewer(): BelongsTo
+    public function interviewer(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
     {
-        return $this->belongsTo(User::class, 'interviewer_id');
+        return $this->hasOneThrough(User::class, InterviewerAvailability::class, 'id', 'id', 'availability_id', 'interviewer_id');
     }
 
     /**
@@ -84,5 +83,46 @@ class InterviewBooking extends Model
     public function canceller(): BelongsTo
     {
         return $this->cancelledBy();
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'booking_status' => ['status_id', Status::class, 'booked', 'booking'],
+        ];
+    }
+
+    public function bookingStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Status::class, 'status_id');
+    }
+
+    // interviewer / start / end are no longer copied into the booking: they come from the availability slot
+    public function getInterviewerIdAttribute(): ?int
+    {
+        return $this->availability?->interviewer_id;
+    }
+
+    public function getStartAtAttribute()
+    {
+        return $this->availability?->start_at;
+    }
+
+    public function getEndAtAttribute()
+    {
+        return $this->availability?->end_at;
+    }
+
+    protected static function booted(): void
+    {
+        // active_availability_id has a UNIQUE index: one active booking per slot, cancelled slots can be re-booked
+        static::saving(function (self $b) {
+            $b->active_availability_id = ($b->booking_status === 'cancelled' || $b->trashed()) ? null : $b->availability_id;
+        });
+        static::deleting(function (self $b) {
+            if (! $b->isForceDeleting()) {
+                $b->newQuery()->whereKey($b->getKey())->update(['active_availability_id' => null]);
+            }
+        });
     }
 }

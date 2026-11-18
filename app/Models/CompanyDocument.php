@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CompanyDocument extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes;
 
     public const TYPES = ['commercial_register', 'tax_card', 'license', 'other'];
@@ -28,5 +30,17 @@ class CompanyDocument extends Model
     public function uploaderAdmin(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'uploaded_by_admin_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'type' => ['document_type_id', DocumentType::class, 'other'],
+        ];
+    }
+
+    public function documentType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(DocumentType::class, 'document_type_id');
     }
 }

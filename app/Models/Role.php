@@ -24,7 +24,7 @@ class Role extends Model
 
     public function isCompanyRole(): bool
     {
-        return ($this->category?->name ?? $this->scope) === 'company';
+        return $this->category?->name === 'company';
     }
 
     public function userRoles(): HasMany
@@ -32,9 +32,9 @@ class Role extends Model
         return $this->hasMany(UserRole::class, 'role_id');
     }
 
-    public function companyEmployees(): HasMany
+    public function companyEmployees(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
-        return $this->hasMany(CompanyEmployee::class, 'role_id');
+        return $this->hasManyThrough(CompanyEmployee::class, UserRole::class, 'role_id', 'user_id', 'id', 'user_id');
     }
 
     public function permissions(): BelongsToMany

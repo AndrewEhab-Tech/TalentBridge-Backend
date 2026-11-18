@@ -3,41 +3,32 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Traits\HasRecordVisibility;
+use App\Traits\HasCompanyStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Company extends Model
 {
-    use Auditable, HasFactory, SoftDeletes;
+    use \App\Models\Concerns\HasLookupAttributes;
+
+    use Auditable, HasCompanyStatus, HasFactory, HasRecordVisibility, SoftDeletes;
 
     protected $table = 'companies';
 
     protected $guarded = [];
 
-    protected $attributes = [
-        'account_status_id' => AccountStatus::ACTIVE,
-    ];
-
     protected $casts = [
         'reviewed_at' => 'datetime',
     ];
 
-    public function accountStatus(): BelongsTo
-    {
-        return $this->belongsTo(AccountStatus::class, 'account_status_id');
-    }
-
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
-    }
-
-    public function reviewer(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function reviewerAdmin(): BelongsTo
@@ -50,9 +41,9 @@ class Company extends Model
         return $this->hasMany(UserRole::class, 'company_id');
     }
 
-    public function companySocialLinks(): HasMany
+    public function socialLinks(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
-        return $this->hasMany(CompanySocialLink::class, 'company_id');
+        return $this->morphMany(SocialLink::class, 'linkable');
     }
 
     public function companyEmployees(): HasMany
@@ -78,5 +69,82 @@ class Company extends Model
     public function salaryRecords(): HasMany
     {
         return $this->hasMany(SalaryRecord::class, 'company_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'approval_status' => ['approval_status_id', ApprovalStatus::class, 'under_review'],
+            'industry' => ['industry_id', Industry::class, null],
+            'size' => ['company_size_id', CompanySize::class, null],
+            'timezone' => ['timezone_id', Timezone::class, null],
+        ];
+    }
+
+    public function approvalStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ApprovalStatus::class, 'approval_status_id');
+    }
+
+    public function companyStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CompanyStatus::class, 'company_status_id');
+    }
+
+    public function industry(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Industry::class, 'industry_id');
+    }
+
+    public function companySize(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CompanySize::class, 'company_size_id');
+    }
+
+    public function timezone(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Timezone::class, 'timezone_id');
+    }
+
+    public function locations(): BelongsToMany
+    {
+        return $this->belongsToMany(Area::class, 'company_locations', 'company_id', 'area_id')
+            ->withPivot('is_headquarters')
+            ->withTimestamps();
+    }
+
+    public function headquarters(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CompanyLocation::class, 'company_id')->where('is_headquarters', true);
+    }
+
+    public function benefits(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Benefit::class, 'company_benefits', 'company_id', 'benefit_id');
+    }
+
+    public function workspace(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CompanyWorkspace::class, 'company_id');
+    }
+
+    public function departments(): HasMany
+    {
+        return $this->hasMany(Department::class, 'company_id');
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(CompanyInvitation::class, 'company_id');
+    }
+
+    public function talentPool(): HasMany
+    {
+        return $this->hasMany(CompanyTalentPool::class, 'company_id');
+    }
+
+    public function offerLetterTemplates(): HasMany
+    {
+        return $this->hasMany(OfferLetterTemplate::class, 'company_id');
     }
 }

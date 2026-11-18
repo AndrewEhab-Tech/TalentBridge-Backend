@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CandidateSocialLink extends Model
 {
+    use \App\Models\Concerns\HasLookupAttributes;
+
     use SoftDeletes, Auditable;
 
 
@@ -18,5 +20,17 @@ class CandidateSocialLink extends Model
     public function candidate(): BelongsTo
     {
         return $this->belongsTo(CandidateProfile::class, 'candidate_id');
+    }
+
+    protected function lookups(): array
+    {
+        return [
+            'platform' => ['social_platform_id', SocialPlatform::class, null],
+        ];
+    }
+
+    public function socialPlatform(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(SocialPlatform::class, 'social_platform_id');
     }
 }

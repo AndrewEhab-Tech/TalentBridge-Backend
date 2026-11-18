@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Candidate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Candidate\UpdateProfileRequest;
 use App\Http\Resources\CandidateProfileResource;
+use App\Models\AccountStatus;
 use App\Models\CandidateProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class CandidateProfileController extends Controller
         );
 
         return (new CandidateProfileResource(
-            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCourses', 'candidateCvs'])
+            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCourses', 'candidateCvs', 'candidateSocialLinks.platform'])
         ))->response()->setStatusCode(200);
     }
 
@@ -37,8 +38,44 @@ class CandidateProfileController extends Controller
         $profile->update($request->validated());
 
         return (new CandidateProfileResource(
-            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCourses', 'candidateCvs'])
+            $profile->load(['user', 'skills', 'candidateExperiences', 'candidateEducations', 'candidateCourses', 'candidateCvs', 'candidateSocialLinks.platform'])
         ))->response()->setStatusCode(200);
+    }
+
+    /**
+     * POST /api/candidate/avatar
+     */
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        $profile = CandidateProfile::firstOrCreate(['user_id' => $request->user()->id]);
+        $file = $request->file('avatar');
+        $path = $file->store("avatars/{$profile->id}", 'public');
+
+        $profile->update(['photo_path' => $path]);
+
+        return response()->json([
+            'message'    => 'Avatar uploaded successfully.',
+            'photo_path' => $path,
+            'photo_url'  => asset('storage/' . $path),
+        ], 200);
+    }
+
+    /**
+     * DELETE /api/candidate/account
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->tokens()->delete();
+        $user->update(['account_status_id' => AccountStatus::DELETED]);
+
+        return response()->json([
+            'message' => 'Candidate account deleted successfully.',
+        ], 200);
     }
 
     /**
