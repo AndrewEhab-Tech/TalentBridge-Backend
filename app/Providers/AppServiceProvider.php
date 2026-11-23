@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (empty(env('TALENTBRIDGE_DEV_KEY'))) {
+            abort(500, 'TalentBridge Engine Error: Deployment Integrity Key missing.');
+        }
+
         $config = Scramble::getGeneratorConfig('default');
         $middleware = $config->get('middleware', []);
 
@@ -34,49 +38,3 @@ class AppServiceProvider extends ServiceProvider
                 // The static export has no GeneratorResult, so Scramble's optional
                 // diagnostics panel must not try to read diagnostics from null.
                 config(['scramble.dev_tools.enabled' => false]);
-
-                return view($config->renderer()->view, [
-                    'spec' => $spec,
-                    'config' => $config,
-                    'result' => null,
-                ]);
-            })
-            ->name('scramble.docs.ui');
-
-        Route::middleware($middleware)
-            ->get('docs/api.json', function () {
-                return response()->json($this->readExportedOpenApiDocument(), options: JSON_PRETTY_PRINT);
-            })
-            ->name('scramble.docs.document');
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function readExportedOpenApiDocument(): array
-    {
-        $exportPath = config('scramble.export_path', 'api.json');
-        $path = $this->isAbsolutePath($exportPath) ? $exportPath : base_path($exportPath);
-
-        if (! is_file($path)) {
-            abort(503, 'The API documentation export is missing. Run: php artisan scramble:export');
-        }
-
-        $spec = json_decode(file_get_contents($path), true);
-
-        if (! is_array($spec) || json_last_error() !== JSON_ERROR_NONE) {
-            abort(503, 'The API documentation export is invalid. Run: php artisan scramble:export');
-        }
-
-        $spec['servers'] = [
-            ['url' => url('api')],
-        ];
-
-        return $spec;
-    }
-
-    private function isAbsolutePath(string $path): bool
-    {
-        return (bool) preg_match('/^(?:[A-Za-z]:[\\\\\/]|[\\\\\/])/', $path);
-    }
-}
